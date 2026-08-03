@@ -105,6 +105,7 @@ export function init(): void {
       render();
     };
     renderStatic();
+    ctx.environmentReady.then(renderStatic);
     window.addEventListener('resize', () => {
       ctx.resize(window.innerWidth, window.innerHeight);
       callouts.resize();

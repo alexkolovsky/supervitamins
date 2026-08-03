@@ -12,96 +12,132 @@ export interface Capsule {
   dispose(): void;
 }
 
-function createGrainTexture(): THREE.CanvasTexture {
-  const size = 256;
+const BODY_RADIUS = 0.27;
+// Cap half slides OVER the body: ~4.5% larger diameter
+const CAP_RADIUS = 0.283;
+const CAP_DOME_HEIGHT = 0.45;
+const SEAM_Y = 0.1;
+
+function createGrainTexture(scale: number): THREE.CanvasTexture {
+  const size = 512;
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext('2d');
   if (ctx) {
-    ctx.fillStyle = '#888888';
+    ctx.fillStyle = '#808080';
     ctx.fillRect(0, 0, size, size);
-    // Deterministic speckle noise (LCG so scrubbing/rebuilds look identical)
+    // Deterministic speckle noise (LCG so rebuilds look identical)
     let seed = 1337;
     const rand = (): number => {
       seed = (seed * 1664525 + 1013904223) % 4294967296;
       return seed / 4294967296;
     };
-    for (let i = 0; i < 9000; i++) {
-      const v = 90 + Math.floor(rand() * 130);
+    for (let i = 0; i < 42000; i++) {
+      const v = 96 + Math.floor(rand() * 96);
       ctx.fillStyle = `rgb(${v},${v},${v})`;
-      ctx.fillRect(Math.floor(rand() * size), Math.floor(rand() * size), 2, 2);
+      const s = rand() < 0.85 ? 1 : 2;
+      ctx.fillRect(Math.floor(rand() * size), Math.floor(rand() * size), s, s);
     }
   }
   const texture = new THREE.CanvasTexture(canvas);
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(3, 3);
+  texture.repeat.set(scale, scale);
   return texture;
+}
+
+/**
+ * Cap half as a lathe: dome top, straight overlap ring, and a sharp open rim
+ * with a tiny inward lip — the rim edge is what catches the seam highlight.
+ * Local origin sits at the rim (y = 0), dome pointing +Y.
+ */
+function createCapHalfGeometry(): THREE.LatheGeometry {
+  const r = CAP_RADIUS;
+  const domeCenterY = CAP_DOME_HEIGHT - r;
+  const points: THREE.Vector2[] = [];
+  // Dome from pole to equator
+  const domeSteps = 14;
+  for (let i = 0; i <= domeSteps; i++) {
+    const a = (i / domeSteps) * (Math.PI / 2);
+    points.push(new THREE.Vector2(r * Math.sin(a), domeCenterY + r * Math.cos(a)));
+  }
+  // Straight overlap ring down to the rim
+  points.push(new THREE.Vector2(r, 0.015));
+  // Sharp rim edge + tiny inward lip
+  points.push(new THREE.Vector2(r, 0));
+  points.push(new THREE.Vector2(r - 0.012, 0));
+  points.push(new THREE.Vector2(r - 0.012, 0.02));
+  return new THREE.LatheGeometry(points, 64);
 }
 
 /**
  * Procedural two-piece gelatin capsule with a powder core.
  * Swap point for a real GLTF: keep the two-halves structure (bodyHalf/capHalf
- * pivoting apart along local Y) and the seam/anchor conventions.
+ * pulling apart along local Y) and the seam/anchor conventions.
  */
 export function createCapsule(): Capsule {
   const group = new THREE.Group();
   group.name = 'capsule';
+  // Seam a few degrees off horizontal in the showcase pose — perfectly level reads as CGI
+  group.rotation.z = 0.07;
 
-  const grain = createGrainTexture();
+  const powderGrain = createGrainTexture(8);
+
+  const gelatin = {
+    transmission: 0.62,
+    thickness: 0.05,
+    attenuationColor: new THREE.Color(0xf0dcbe),
+    attenuationDistance: 0.28,
+    roughness: 0.16,
+    ior: 1.45,
+    clearcoat: 0.4,
+    clearcoatRoughness: 0.35,
+    metalness: 0,
+    envMapIntensity: 1.5,
+    transparent: true,
+  } as const;
 
   const shellBodyMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0xf6efe4,
-    roughness: 0.55,
-    metalness: 0,
-    transmission: 0.35,
-    thickness: 0.35,
-    transparent: true,
-    roughnessMap: grain,
+    ...gelatin,
+    color: 0xf7f0e3,
   });
   const shellCapMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0xf3d6ca,
-    roughness: 0.55,
-    metalness: 0,
-    transmission: 0.35,
-    thickness: 0.35,
-    transparent: true,
-    roughnessMap: grain,
+    ...gelatin,
+    color: 0xf2cfc0,
   });
   const powderMaterial = new THREE.MeshStandardMaterial({
-    color: 0xefe2cd,
+    color: 0xf4ecdc,
     roughness: 1,
     metalness: 0,
-    roughnessMap: grain,
-    bumpMap: grain,
-    bumpScale: 0.6,
+    bumpMap: powderGrain,
+    bumpScale: 0.45,
     transparent: true,
   });
 
-  // Lower (body) half — slightly narrower, slides into the cap half
-  const bodyGeometry = new THREE.CapsuleGeometry(0.27, 0.55, 12, 48);
+  // Lower (body) half — narrower, slides inside the cap half
+  const bodyGeometry = new THREE.CapsuleGeometry(BODY_RADIUS, 0.6, 16, 64);
   const bodyHalf = new THREE.Group();
   const bodyShell = new THREE.Mesh(bodyGeometry, shellBodyMaterial);
   bodyHalf.add(bodyShell);
 
-  // Powder core rides in the body half
-  const powderGeometry = new THREE.CapsuleGeometry(0.225, 0.5, 8, 32);
+  // Powder core: opaque fill at ~92% of shell radius, clearly visible through the shell
+  const powderGeometry = new THREE.CapsuleGeometry(BODY_RADIUS * 0.92, 0.56, 12, 48);
   const powder = new THREE.Mesh(powderGeometry, powderMaterial);
   bodyHalf.add(powder);
 
-  bodyHalf.position.y = -0.14;
+  bodyHalf.position.y = -0.08;
   group.add(bodyHalf);
 
-  // Upper (cap) half — slightly wider, overlaps the body
-  const capGeometry = new THREE.CapsuleGeometry(0.295, 0.3, 12, 48);
+  // Upper (cap) half — lathe with straight overlap ring and rim lip
+  const capGeometry = createCapHalfGeometry();
   const capHalf = new THREE.Group();
   const capShell = new THREE.Mesh(capGeometry, shellCapMaterial);
   capHalf.add(capShell);
-  capHalf.position.y = 0.26;
+  capHalf.position.y = SEAM_Y;
   group.add(capHalf);
 
-  const seamLocal = new THREE.Vector3(0, 0.08, 0.29);
+  const seamLocal = new THREE.Vector3(0, SEAM_Y, CAP_RADIUS);
 
   // Callout anchor points, hugging the capsule silhouette
   const anchorOffsets: Array<[number, number, number]> = [
@@ -143,7 +179,7 @@ export function createCapsule(): Capsule {
     shellBodyMaterial.dispose();
     shellCapMaterial.dispose();
     powderMaterial.dispose();
-    grain.dispose();
+    powderGrain.dispose();
   }
 
   return { group, seamLocal, anchors, setSplit, setOpacity, dispose };
