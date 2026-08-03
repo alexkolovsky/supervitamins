@@ -47,9 +47,13 @@ function createGrainTexture(scale: number): THREE.CanvasTexture {
   return texture;
 }
 
+const WALL = 0.012;
+const BODY_DEPTH = 0.55; // straight side below the body rim
+
 /**
  * Cap half as a lathe: dome top, straight overlap ring, and a sharp open rim
- * with a tiny inward lip — the rim edge is what catches the seam highlight.
+ * with a short inner wall — the rim edge is what catches the seam highlight,
+ * and the visible wall thickness sells it as a real shell when open.
  * Local origin sits at the rim (y = 0), dome pointing +Y.
  */
 function createCapHalfGeometry(): THREE.LatheGeometry {
@@ -64,10 +68,32 @@ function createCapHalfGeometry(): THREE.LatheGeometry {
   }
   // Straight overlap ring down to the rim
   points.push(new THREE.Vector2(r, 0.015));
-  // Sharp rim edge + tiny inward lip
+  // Rim edge, wall thickness, then inner wall running back up
   points.push(new THREE.Vector2(r, 0));
-  points.push(new THREE.Vector2(r - 0.012, 0));
-  points.push(new THREE.Vector2(r - 0.012, 0.02));
+  points.push(new THREE.Vector2(r - WALL, 0));
+  points.push(new THREE.Vector2(r - WALL, 0.16));
+  return new THREE.LatheGeometry(points, 64);
+}
+
+/**
+ * Body half as a lathe: hemispherical bottom, straight side, and an OPEN top
+ * rim with visible wall thickness — this is the cup the powder sits in.
+ * Local origin sits at the open rim (y = 0), dome pointing -Y.
+ */
+function createBodyHalfGeometry(): THREE.LatheGeometry {
+  const r = BODY_RADIUS;
+  const points: THREE.Vector2[] = [];
+  // Bottom dome from pole to equator
+  const domeSteps = 14;
+  for (let i = 0; i <= domeSteps; i++) {
+    const a = (i / domeSteps) * (Math.PI / 2);
+    points.push(new THREE.Vector2(r * Math.sin(a), -BODY_DEPTH - r * Math.cos(a)));
+  }
+  // Straight side up to the open rim
+  points.push(new THREE.Vector2(r, 0));
+  // Rim edge, wall thickness, short inner wall back down (powder hides the rest)
+  points.push(new THREE.Vector2(r - WALL, 0));
+  points.push(new THREE.Vector2(r - WALL, -0.14));
   return new THREE.LatheGeometry(points, 64);
 }
 
@@ -107,7 +133,7 @@ export function createCapsule(): Capsule {
     color: 0xf2cfc0,
   });
   const powderMaterial = new THREE.MeshStandardMaterial({
-    color: 0xf4ecdc,
+    color: 0xefe0c4,
     roughness: 1,
     metalness: 0,
     bumpMap: powderGrain,
@@ -115,18 +141,23 @@ export function createCapsule(): Capsule {
     transparent: true,
   });
 
-  // Lower (body) half — narrower, slides inside the cap half
-  const bodyGeometry = new THREE.CapsuleGeometry(BODY_RADIUS, 0.6, 16, 64);
+  // Lower (body) half — open cup, rim tucked inside the cap's overlap ring
+  const bodyGeometry = createBodyHalfGeometry();
   const bodyHalf = new THREE.Group();
   const bodyShell = new THREE.Mesh(bodyGeometry, shellBodyMaterial);
   bodyHalf.add(bodyShell);
 
-  // Powder core: opaque fill at ~92% of shell radius, clearly visible through the shell
-  const powderGeometry = new THREE.CapsuleGeometry(BODY_RADIUS * 0.92, 0.56, 12, 48);
+  // Powder fill: opaque core whose domed top surface sits just below the open
+  // rim, so the opened body half visibly reads as a cup full of powder.
+  const powderGeometry = new THREE.CapsuleGeometry(BODY_RADIUS * 0.9, 0.28, 12, 48);
   const powder = new THREE.Mesh(powderGeometry, powderMaterial);
+  const powderRestY = -0.03 - 0.14 - BODY_RADIUS * 0.9;
+  powder.position.y = powderRestY;
   bodyHalf.add(powder);
 
-  bodyHalf.position.y = -0.08;
+  // Rim rides just under the cap's interior dome, so the overlap ring always
+  // has body shell beneath it when closed — no milky empty band at the seam.
+  bodyHalf.position.y = 0.24;
   group.add(bodyHalf);
 
   // Upper (cap) half — lathe with straight overlap ring and rim lip
@@ -160,9 +191,9 @@ export function createCapsule(): Capsule {
   function setSplit(t: number): void {
     bodyHalf.position.y = bodyRestY - t * 0.55;
     capHalf.position.y = capRestY + t * 0.55;
-    // The powder core stays behind and thins out as it spills
-    powder.scale.setScalar(Math.max(0.001, 1 - t * 0.45));
-    powderMaterial.opacity = 1 - t * 0.5;
+    // The powder level sinks slightly as it spills, but the cup stays filled
+    powder.position.y = powderRestY - t * 0.03;
+    powderMaterial.opacity = 1 - t * 0.15;
   }
 
   function setOpacity(opacity: number): void {

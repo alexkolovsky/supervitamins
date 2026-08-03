@@ -46,17 +46,17 @@ export function createPowderParticles(seamLocal: THREE.Vector3, count: number): 
   const trajectories: Trajectory[] = [];
   for (let i = 0; i < count; i++) {
     const angle = rand() * Math.PI * 2;
-    const spread = rand() * 0.22;
+    const spread = rand() * 0.12;
     trajectories.push({
       start: new THREE.Vector3(
         seamLocal.x + Math.cos(angle) * spread,
-        seamLocal.y + (rand() - 0.5) * 0.1,
+        seamLocal.y + (rand() - 0.5) * 0.08,
         seamLocal.z * 0.2 + Math.sin(angle) * spread,
       ),
       velocity: new THREE.Vector3(
-        Math.cos(angle) * (0.25 + rand() * 0.5),
-        -0.15 - rand() * 0.5,
-        Math.sin(angle) * (0.25 + rand() * 0.5),
+        Math.cos(angle) * (0.12 + rand() * 0.28),
+        -0.3 - rand() * 0.55,
+        Math.sin(angle) * (0.12 + rand() * 0.28),
       ),
       phase: rand() * Math.PI * 2,
       turbulence: 0.04 + rand() * 0.08,
