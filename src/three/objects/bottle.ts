@@ -10,10 +10,9 @@ export interface Bottle {
 }
 
 const BODY_RADIUS = 0.85;
-// Label panel recessed ~1.5% into the body
-const PANEL_RADIUS = BODY_RADIUS * 0.985;
-const NECK_RADIUS = 0.5;
+const NECK_RADIUS = 0.62;
 const NECK_TOP_Y = 2.62;
+const CORAL = '#dd6360';
 
 function createLabelTexture(): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
@@ -22,35 +21,32 @@ function createLabelTexture(): THREE.CanvasTexture {
   const ctx = canvas.getContext('2d');
   if (ctx) {
     const cx = canvas.width / 2;
-    ctx.fillStyle = '#fdf4f0';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const h = canvas.height;
+    // White paper with coral accent stripes at the label's top and bottom edges
+    ctx.fillStyle = '#fbf7f3';
+    ctx.fillRect(0, 0, canvas.width, h);
+    ctx.fillStyle = CORAL;
+    ctx.fillRect(0, 0, canvas.width, 36);
+    ctx.fillRect(0, h - 36, canvas.width, 36);
+
     ctx.textAlign = 'center';
 
-    ctx.fillStyle = '#d8797c';
+    // Big bold two-line wordmark, reference style
+    ctx.fillStyle = CORAL;
+    ctx.font = '800 218px Helvetica, Arial, sans-serif';
+    ctx.fillText('SUPER', cx, 330);
+    ctx.fillText('VITA', cx, 530);
+
+    ctx.fillStyle = '#3a3232';
+    ctx.font = '500 64px Helvetica, Arial, sans-serif';
+    ctx.fillText('Women’s Daily Multivitamin', cx, 680);
+    ctx.fillText('for Energy and Balance', cx, 762);
+
+    ctx.fillStyle = CORAL;
+    ctx.font = '600 44px Helvetica, Arial, sans-serif';
+    ctx.fillText('DIETARY SUPPLEMENT', cx, 880);
     ctx.font = '500 40px Helvetica, Arial, sans-serif';
-    ctx.fillText('W O M E N ’ S   D A I L Y', cx, 300);
-
-    ctx.fillStyle = '#e96a6e';
-    ctx.font = '600 170px Georgia, serif';
-    ctx.fillText('SUPERVITA', cx, 480);
-
-    ctx.strokeStyle = '#e8a5a2';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(cx - 330, 550);
-    ctx.lineTo(cx + 330, 550);
-    ctx.stroke();
-
-    ctx.fillStyle = '#d8797c';
-    ctx.font = '300 44px Helvetica, Arial, sans-serif';
-    ctx.fillText('MULTIVITAMIN  ·  23 ESSENTIAL NUTRIENTS', cx, 640);
-
-    ctx.font = '300 38px Helvetica, Arial, sans-serif';
-    ctx.fillStyle = '#dd9694';
-    ctx.fillText('60 CAPSULES  —  DIETARY SUPPLEMENT', cx, 720);
-
-    ctx.font = 'italic 300 34px Georgia, serif';
-    ctx.fillText('one capsule a day, with or without food', cx, 800);
+    ctx.fillText('60 CAPSULES', cx, 940);
   }
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -58,115 +54,137 @@ function createLabelTexture(): THREE.CanvasTexture {
   return texture;
 }
 
-/** Two helical thread ridges around the neck, as real geometry so they catch light. */
-function createThreads(material: THREE.Material): { mesh: THREE.Group; geometries: THREE.BufferGeometry[] } {
-  const mesh = new THREE.Group();
-  const geometries: THREE.BufferGeometry[] = [];
-  const turns = 1.4;
-  const pitch = 0.09;
-  const helixRadius = NECK_RADIUS + 0.004;
-  for (let ridge = 0; ridge < 2; ridge++) {
-    const phase = ridge * Math.PI;
-    const startY = 2.38 + ridge * 0.02;
-    const points: THREE.Vector3[] = [];
-    const steps = Math.ceil(turns * 32);
-    for (let i = 0; i <= steps; i++) {
-      const a = (i / steps) * turns * Math.PI * 2 + phase;
-      points.push(new THREE.Vector3(Math.cos(a) * helixRadius, startY + (i / steps) * turns * pitch, Math.sin(a) * helixRadius));
-    }
-    const curve = new THREE.CatmullRomCurve3(points);
-    const tube = new THREE.TubeGeometry(curve, steps * 2, 0.013, 8, false);
-    geometries.push(tube);
-    mesh.add(new THREE.Mesh(tube, material));
-  }
-  return { mesh, geometries };
+/** Deterministic PRNG for the jumbled capsules inside the jar. */
+function mulberry32(seed: number): () => number {
+  let a = seed;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
 /**
- * Procedural rounded-shoulder supplement bottle with a recessed label panel
- * and real helical neck threads.
- * Swap point for a real GLTF: return the loaded scene as `group`
- * and keep the same interface (neckTopY/neckRadius drive cap + capsule paths).
+ * Clear glass supplement jar: straight cylindrical body, tight shoulder, wide
+ * neck with a bead ring, capsules visible inside, white label band with coral
+ * accent stripes. Swap point for a real GLTF: return the loaded scene as
+ * `group`, keep neckTopY/neckRadius (they drive the cap seat + capsule path).
  */
 export function createBottle(): Bottle {
   const group = new THREE.Group();
   group.name = 'bottle';
 
-  // Lathe profile: (radius, height) pairs from base to neck lip
+  // Glass profile: straight wall, short shoulder, wide neck, mouth lip
   const profile: Array<[number, number]> = [
-    // Base with chamfered foot
-    [0.0, 0.02],
-    [0.5, 0.0],
-    [0.78, 0.03],
-    [0.84, 0.1],
-    [BODY_RADIUS, 0.18],
-    // Lower body, then step into the recessed label panel
-    [BODY_RADIUS, 0.3],
-    [PANEL_RADIUS, 0.34],
-    [PANEL_RADIUS, 1.6],
-    // Step back out above the panel
-    [BODY_RADIUS, 1.64],
-    [BODY_RADIUS, 1.84],
-    // Tight-radius shoulder
-    [0.845, 1.96],
-    [0.8, 2.08],
-    [0.7, 2.18],
-    [0.58, 2.26],
-    [0.52, 2.31],
-    // Neck with thread zone
-    [NECK_RADIUS, 2.36],
+    [0.0, 0.04],
+    [0.55, 0.04],
+    [0.76, 0.06],
+    [0.83, 0.12],
+    [BODY_RADIUS, 0.22],
+    [BODY_RADIUS, 2.02],
+    [0.83, 2.12],
+    [0.76, 2.2],
+    [0.67, 2.27],
+    [NECK_RADIUS, 2.33],
     [NECK_RADIUS, NECK_TOP_Y],
-    // Lip
-    [0.42, NECK_TOP_Y],
-    [0.42, NECK_TOP_Y - 0.06],
+    [0.54, NECK_TOP_Y],
+    [0.54, NECK_TOP_Y - 0.14],
   ];
   const points = profile.map(([x, y]) => new THREE.Vector2(x, y));
   const bodyGeometry = new THREE.LatheGeometry(points, 96);
 
-  const bodyMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0xf7e2da,
-    roughness: 0.3,
+  const glassMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0xffffff,
+    transmission: 0.95,
+    thickness: 0.04,
+    roughness: 0.04,
+    ior: 1.5,
+    clearcoat: 0.5,
+    clearcoatRoughness: 0.1,
     metalness: 0,
-    clearcoat: 0.6,
-    clearcoatRoughness: 0.25,
-    sheen: 0.35,
-    sheenColor: 0xffd9cf,
-    sheenRoughness: 0.6,
     envMapIntensity: 1.2,
     transparent: true,
   });
-  const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+  const body = new THREE.Mesh(bodyGeometry, glassMaterial);
   group.add(body);
 
-  const threads = createThreads(bodyMaterial);
-  group.add(threads.mesh);
+  // Bead ring under the cap (the glass lip real jars have)
+  const beadGeometry = new THREE.TorusGeometry(NECK_RADIUS + 0.015, 0.025, 10, 64);
+  const bead = new THREE.Mesh(beadGeometry, glassMaterial);
+  bead.rotation.x = Math.PI / 2;
+  bead.position.y = 2.44;
+  group.add(bead);
 
-  // Label wrap, seated inside the recessed panel (paper: rougher than the plastic)
+  // Glass thread rings on the neck, revealed as the cap unscrews
+  const threadGeometry = new THREE.TorusGeometry(NECK_RADIUS + 0.008, 0.014, 8, 64);
+  for (const y of [2.5, 2.56]) {
+    const ring = new THREE.Mesh(threadGeometry, glassMaterial);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = y;
+    group.add(ring);
+  }
+
+  // Jumbled capsules inside, visible through the glass above and below the label
+  const pillGeometry = new THREE.CapsuleGeometry(0.135, 0.3, 8, 24);
+  const pillMaterial = new THREE.MeshStandardMaterial({
+    color: 0xf2e3d0,
+    roughness: 0.45,
+    metalness: 0,
+    envMapIntensity: 0.8,
+  });
+  // Cluster the pills in the zones visible past the label (under the cap and
+  // at the base) and press them toward the glass wall, like the reference.
+  const pillCount = 26;
+  const pills = new THREE.InstancedMesh(pillGeometry, pillMaterial, pillCount);
+  const rand = mulberry32(48151623);
+  const dummy = new THREE.Object3D();
+  for (let i = 0; i < pillCount; i++) {
+    const angle = rand() * Math.PI * 2;
+    const radius = 0.25 + rand() * 0.32;
+    const upperZone = i < 12;
+    const y = upperZone ? 1.55 + rand() * 0.42 : 0.2 + rand() * 0.38;
+    dummy.position.set(Math.cos(angle) * radius, y, Math.sin(angle) * radius);
+    dummy.rotation.set(rand() * Math.PI, rand() * Math.PI, rand() * Math.PI);
+    dummy.updateMatrix();
+    pills.setMatrixAt(i, dummy.matrix);
+  }
+  pills.instanceMatrix.needsUpdate = true;
+  group.add(pills);
+
+  // Label band wrapping the middle of the jar
   const labelTexture = createLabelTexture();
-  const labelGeometry = new THREE.CylinderGeometry(PANEL_RADIUS + 0.005, PANEL_RADIUS + 0.005, 1.22, 96, 1, true);
+  const labelGeometry = new THREE.CylinderGeometry(BODY_RADIUS + 0.012, BODY_RADIUS + 0.012, 1.18, 96, 1, true);
   const labelMaterial = new THREE.MeshStandardMaterial({
     map: labelTexture,
-    roughness: 0.68,
+    roughness: 0.7,
     metalness: 0,
-    envMapIntensity: 0.6,
+    envMapIntensity: 0.5,
     transparent: true,
   });
   const label = new THREE.Mesh(labelGeometry, labelMaterial);
-  label.position.y = 0.97;
+  label.position.y = 1.08;
   // Face the wordmark toward the camera (+Z)
   label.rotation.y = Math.PI;
   group.add(label);
 
   function setOpacity(opacity: number): void {
-    bodyMaterial.opacity = opacity;
+    glassMaterial.opacity = opacity;
     labelMaterial.opacity = opacity;
+    pillMaterial.opacity = opacity;
+    pillMaterial.transparent = opacity < 0.999;
     group.visible = opacity > 0.001;
   }
 
   function dispose(): void {
     bodyGeometry.dispose();
-    for (const g of threads.geometries) g.dispose();
-    bodyMaterial.dispose();
+    beadGeometry.dispose();
+    threadGeometry.dispose();
+    pillGeometry.dispose();
+    pills.dispose();
+    glassMaterial.dispose();
+    pillMaterial.dispose();
     labelGeometry.dispose();
     labelMaterial.dispose();
     labelTexture.dispose();
