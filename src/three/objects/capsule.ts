@@ -12,11 +12,16 @@ export interface Capsule {
   dispose(): void;
 }
 
-const BODY_RADIUS = 0.27;
-// Cap half slides OVER the body: ~4.5% larger diameter
-const CAP_RADIUS = 0.283;
-const CAP_DOME_HEIGHT = 0.45;
-const SEAM_Y = 0.1;
+// Real "size 0" capsule proportions: length/diameter ≈ 2.9, cap ≈ 45% of length
+const BODY_RADIUS = 0.22;
+// Cap half slides OVER the body: ~5% larger diameter
+const CAP_RADIUS = 0.232;
+const CAP_STRAIGHT = 0.35; // straight cylindrical section of the cap half
+const BODY_STRAIGHT = 0.75; // straight section of the body half below its rim
+const WALL = 0.01;
+const SEAM_Y = 0.1; // world-local Y of the cap's open rim when closed
+// Body rim tucks up under the cap's dome when closed
+const BODY_REST_Y = SEAM_Y + CAP_STRAIGHT - 0.02;
 
 function createGrainTexture(scale: number): THREE.CanvasTexture {
   const size = 512;
@@ -47,54 +52,58 @@ function createGrainTexture(scale: number): THREE.CanvasTexture {
   return texture;
 }
 
-const WALL = 0.012;
-const BODY_DEPTH = 0.55; // straight side below the body rim
-
-/**
- * Cap half as a lathe: dome top, straight overlap ring, and a sharp open rim
- * with a short inner wall — the rim edge is what catches the seam highlight,
- * and the visible wall thickness sells it as a real shell when open.
- * Local origin sits at the rim (y = 0), dome pointing +Y.
- */
-function createCapHalfGeometry(): THREE.LatheGeometry {
-  const r = CAP_RADIUS;
-  const domeCenterY = CAP_DOME_HEIGHT - r;
-  const points: THREE.Vector2[] = [];
-  // Dome from pole to equator
-  const domeSteps = 14;
-  for (let i = 0; i <= domeSteps; i++) {
-    const a = (i / domeSteps) * (Math.PI / 2);
-    points.push(new THREE.Vector2(r * Math.sin(a), domeCenterY + r * Math.cos(a)));
+/** Quarter-circle dome points from pole to equator (or reversed for a bottom dome). */
+function domePoints(radius: number, centerY: number, up: boolean, steps = 14): THREE.Vector2[] {
+  const pts: THREE.Vector2[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const a = (i / steps) * (Math.PI / 2);
+    pts.push(new THREE.Vector2(radius * Math.sin(a), centerY + (up ? radius * Math.cos(a) : -radius * Math.cos(a))));
   }
-  // Straight overlap ring down to the rim
-  points.push(new THREE.Vector2(r, 0.015));
-  // Rim edge, wall thickness, then inner wall running back up
-  points.push(new THREE.Vector2(r, 0));
-  points.push(new THREE.Vector2(r - WALL, 0));
-  points.push(new THREE.Vector2(r - WALL, 0.16));
-  return new THREE.LatheGeometry(points, 64);
+  return pts;
 }
 
 /**
- * Body half as a lathe: hemispherical bottom, straight side, and an OPEN top
- * rim with visible wall thickness — this is the cup the powder sits in.
- * Local origin sits at the open rim (y = 0), dome pointing -Y.
+ * Cap half: hemispherical dome + LONG straight cylinder + clean open rim with
+ * wall thickness, plus a subtle locking-ring ridge near the rim (the thin ring
+ * line visible on real two-piece capsules). Origin at the rim, dome up.
+ */
+function createCapHalfGeometry(): THREE.LatheGeometry {
+  const r = CAP_RADIUS;
+  const points: THREE.Vector2[] = [
+    ...domePoints(r, CAP_STRAIGHT, true),
+    // Straight side down, with a subtle locking-ring ridge near the rim
+    new THREE.Vector2(r, 0.11),
+    new THREE.Vector2(r + 0.004, 0.085),
+    new THREE.Vector2(r + 0.004, 0.065),
+    new THREE.Vector2(r, 0.04),
+    // Rim edge, wall thickness, inner wall back up
+    new THREE.Vector2(r, 0),
+    new THREE.Vector2(r - WALL, 0),
+    new THREE.Vector2(r - WALL, 0.3),
+  ];
+  return new THREE.LatheGeometry(points, 72);
+}
+
+/**
+ * Body half: long straight cylinder + hemispherical bottom, open top rim with
+ * wall thickness, and its own faint locking ring below the rim.
+ * Origin at the open rim, dome down.
  */
 function createBodyHalfGeometry(): THREE.LatheGeometry {
   const r = BODY_RADIUS;
-  const points: THREE.Vector2[] = [];
-  // Bottom dome from pole to equator
-  const domeSteps = 14;
-  for (let i = 0; i <= domeSteps; i++) {
-    const a = (i / domeSteps) * (Math.PI / 2);
-    points.push(new THREE.Vector2(r * Math.sin(a), -BODY_DEPTH - r * Math.cos(a)));
-  }
-  // Straight side up to the open rim
-  points.push(new THREE.Vector2(r, 0));
-  // Rim edge, wall thickness, short inner wall back down (powder hides the rest)
-  points.push(new THREE.Vector2(r - WALL, 0));
-  points.push(new THREE.Vector2(r - WALL, -0.14));
-  return new THREE.LatheGeometry(points, 64);
+  const points: THREE.Vector2[] = [
+    ...domePoints(r, -BODY_STRAIGHT, false),
+    // Straight side up with locking-ring ridge
+    new THREE.Vector2(r, -0.5),
+    new THREE.Vector2(r + 0.003, -0.47),
+    new THREE.Vector2(r + 0.003, -0.455),
+    new THREE.Vector2(r, -0.43),
+    // Up to the open rim
+    new THREE.Vector2(r, 0),
+    new THREE.Vector2(r - WALL, 0),
+    new THREE.Vector2(r - WALL, -0.25),
+  ];
+  return new THREE.LatheGeometry(points, 72);
 }
 
 /**
@@ -110,27 +119,29 @@ export function createCapsule(): Capsule {
 
   const powderGrain = createGrainTexture(8);
 
+  // Satin gelatin: mostly opaque with soft depth, long glossy highlights
   const gelatin = {
-    transmission: 0.62,
-    thickness: 0.05,
-    attenuationColor: new THREE.Color(0xf0dcbe),
-    attenuationDistance: 0.28,
-    roughness: 0.16,
+    transmission: 0.22,
+    thickness: 0.04,
+    attenuationColor: new THREE.Color(0xf3e6cf),
+    attenuationDistance: 0.35,
+    roughness: 0.18,
     ior: 1.45,
-    clearcoat: 0.4,
-    clearcoatRoughness: 0.35,
+    clearcoat: 0.55,
+    clearcoatRoughness: 0.3,
     metalness: 0,
     envMapIntensity: 1.5,
     transparent: true,
+    side: THREE.DoubleSide,
   } as const;
 
   const shellBodyMaterial = new THREE.MeshPhysicalMaterial({
     ...gelatin,
-    color: 0xf7f0e3,
+    color: 0xf8f3e9,
   });
   const shellCapMaterial = new THREE.MeshPhysicalMaterial({
     ...gelatin,
-    color: 0xf2cfc0,
+    color: 0xf4ded3,
   });
   const powderMaterial = new THREE.MeshStandardMaterial({
     color: 0xefe0c4,
@@ -141,7 +152,7 @@ export function createCapsule(): Capsule {
     transparent: true,
   });
 
-  // Lower (body) half — open cup, rim tucked inside the cap's overlap ring
+  // Lower (body) half — long open cup, rim tucked under the cap dome
   const bodyGeometry = createBodyHalfGeometry();
   const bodyHalf = new THREE.Group();
   const bodyShell = new THREE.Mesh(bodyGeometry, shellBodyMaterial);
@@ -149,18 +160,17 @@ export function createCapsule(): Capsule {
 
   // Powder fill: opaque core whose domed top surface sits just below the open
   // rim, so the opened body half visibly reads as a cup full of powder.
-  const powderGeometry = new THREE.CapsuleGeometry(BODY_RADIUS * 0.9, 0.28, 12, 48);
+  const powderRadius = BODY_RADIUS * 0.9;
+  const powderGeometry = new THREE.CapsuleGeometry(powderRadius, 0.4, 12, 48);
   const powder = new THREE.Mesh(powderGeometry, powderMaterial);
-  const powderRestY = -0.03 - 0.14 - BODY_RADIUS * 0.9;
+  const powderRestY = -0.03 - 0.2 - powderRadius;
   powder.position.y = powderRestY;
   bodyHalf.add(powder);
 
-  // Rim rides just under the cap's interior dome, so the overlap ring always
-  // has body shell beneath it when closed — no milky empty band at the seam.
-  bodyHalf.position.y = 0.24;
+  bodyHalf.position.y = BODY_REST_Y;
   group.add(bodyHalf);
 
-  // Upper (cap) half — lathe with straight overlap ring and rim lip
+  // Upper (cap) half
   const capGeometry = createCapHalfGeometry();
   const capHalf = new THREE.Group();
   const capShell = new THREE.Mesh(capGeometry, shellCapMaterial);
@@ -172,10 +182,10 @@ export function createCapsule(): Capsule {
 
   // Callout anchor points, hugging the capsule silhouette
   const anchorOffsets: Array<[number, number, number]> = [
-    [-0.42, 0.42, 0.05],
-    [-0.46, -0.28, 0.05],
-    [0.46, 0.3, 0.05],
-    [0.42, -0.42, 0.05],
+    [-0.38, 0.45, 0.05],
+    [-0.42, -0.3, 0.05],
+    [0.42, 0.32, 0.05],
+    [0.38, -0.45, 0.05],
   ];
   const anchors = anchorOffsets.map(([x, y, z], i) => {
     const anchor = new THREE.Object3D();
@@ -189,8 +199,8 @@ export function createCapsule(): Capsule {
   const capRestY = capHalf.position.y;
 
   function setSplit(t: number): void {
-    bodyHalf.position.y = bodyRestY - t * 0.55;
-    capHalf.position.y = capRestY + t * 0.55;
+    bodyHalf.position.y = bodyRestY - t * 0.6;
+    capHalf.position.y = capRestY + t * 0.6;
     // The powder level sinks slightly as it spills, but the cup stays filled
     powder.position.y = powderRestY - t * 0.03;
     powderMaterial.opacity = 1 - t * 0.15;
