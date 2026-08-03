@@ -1,0 +1,112 @@
+---
+import '@fontsource/fraunces/600.css';
+import '@fontsource/poppins/300.css';
+import '@fontsource/poppins/400.css';
+import '@fontsource/poppins/500.css';
+import '../styles/tokens.css';
+import '../styles/sections.css';
+
+const title = 'Supervita — Women’s Daily Multivitamin';
+const description =
+  'One easy-to-swallow capsule with all essential nutrients: iron to reduce fatigue, 100% of your vitamin C daily requirement, and zinc for skin, hair and nails.';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta name="theme-color" content="#e96a6e" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23e96a6e'/%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <canvas id="webgl" aria-hidden="true"></canvas>
+    <div id="scene-dim" aria-hidden="true"></div>
+
+    <!-- Sparkle accents -->
+    <span class="sparkle" style="top: 18vh; left: 12vw; width: 22px; height: 22px;" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M12 0l2.4 9.6L24 12l-9.6 2.4L12 24l-2.4-9.6L0 12l9.6-2.4z" /></svg>
+    </span>
+    <span class="sparkle" style="top: 32vh; right: 14vw; width: 14px; height: 14px;" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M12 0l2.4 9.6L24 12l-9.6 2.4L12 24l-2.4-9.6L0 12l9.6-2.4z" /></svg>
+    </span>
+    <span class="sparkle" style="bottom: 20vh; left: 20vw; width: 17px; height: 17px;" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M12 0l2.4 9.6L24 12l-9.6 2.4L12 24l-2.4-9.6L0 12l9.6-2.4z" /></svg>
+    </span>
+
+    <!-- Infographic callouts: real DOM text, projected onto the 3D capsule -->
+    <div id="callout-layer">
+      <svg id="callout-lines" aria-hidden="true"></svg>
+      <p class="callout" data-side="left"><strong>All Essential Nutrients</strong></p>
+      <p class="callout" data-side="left"><strong>Iron to Reduce Fatigue</strong></p>
+      <p class="callout" data-side="right"><strong>100% of Vitamin C Daily Requirement</strong></p>
+      <p class="callout" data-side="right"><strong>Zinc Supports Skin, Hair and Nail Health</strong></p>
+    </div>
+
+    <main id="scroll-root">
+      <section id="hero" aria-label="Introduction">
+        <div class="section-inner">
+          <p class="hero-kicker">Supervita · Women’s Daily</p>
+          <h1>Easy to swallow and efficiently absorbed</h1>
+        </div>
+        <p class="scroll-hint">Scroll</p>
+      </section>
+
+      <section id="cap-off" aria-label="Open the bottle">
+        <div class="aside-copy">
+          <h2>One capsule a day</h2>
+          <p>Everything your body asks for, sealed in a single daily dose. No handfuls of pills, no guesswork.</p>
+        </div>
+      </section>
+
+      <section id="dive" aria-label="Meet the capsule">
+        <div class="aside-copy">
+          <h2>Look closer</h2>
+          <p>A gelatin capsule engineered to dissolve where your body absorbs best — gentle on the stomach, kind to your routine.</p>
+        </div>
+      </section>
+
+      <section id="infographic" aria-label="What is inside"></section>
+
+      <section id="split" aria-label="How it works">
+        <div class="split-copy">
+          <h2>Finely milled, fully absorbed</h2>
+          <p>
+            Inside: a micro-milled nutrient blend that disperses in minutes, so vitamins reach your bloodstream instead of
+            passing through. No fillers, no synthetic dyes.
+          </p>
+        </div>
+      </section>
+
+      <section id="cta" aria-label="Get Supervita">
+        <div class="section-inner">
+          <p class="cta-name">Supervita</p>
+          <p class="cta-tagline">The women’s daily multivitamin that actually gets absorbed. One capsule, every essential.</p>
+          <div class="cta-actions">
+            <a class="btn-primary" href="#cta">Shop Now</a>
+            <a class="link-secondary" href="#infographic">See the full formula</a>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <p>© 2026 Supervita. These statements have not been evaluated by the FDA.</p>
+        <nav aria-label="Footer">
+          <a href="#hero">Top</a>
+          <a href="#cta">Shop</a>
+          <a href="#infographic">Formula</a>
+        </nav>
+      </footer>
+    </main>
+
+    <script>
+      import { init } from '../three/main';
+      init();
+    </script>
+  </body>
+</html>

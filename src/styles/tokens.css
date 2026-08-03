@@ -1,0 +1,27 @@
+:root {
+  /* Palette */
+  --c-bg-top: #f6b0a8;
+  --c-bg-bottom: #e96a6e;
+  --c-ink: #ffffff;
+  --c-ink-soft: rgba(255, 255, 255, 0.82);
+  --c-accent: #fff3ef;
+  --c-btn-ink: #d8555c;
+
+  /* Type */
+  --font-display: 'Fraunces', 'Georgia', serif;
+  --font-body: 'Poppins', 'Helvetica Neue', sans-serif;
+
+  --fs-hero: clamp(2rem, 6.2vw, 5.2rem);
+  --fs-h2: clamp(1.6rem, 3.6vw, 3rem);
+  --fs-body: clamp(0.95rem, 1.2vw, 1.1rem);
+  --fs-callout: clamp(0.85rem, 1.15vw, 1.05rem);
+  --fs-small: 0.8rem;
+
+  --track-caps: 0.14em;
+
+  /* Layout */
+  --space-gutter: clamp(1.25rem, 5vw, 4.5rem);
+  --callout-col: clamp(180px, 22vw, 300px);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
