@@ -44,7 +44,7 @@ export function init(): void {
   const bottle = createBottle();
   const cap = createCap();
   const capsule = createCapsule();
-  const particles = createPowderParticles(capsule.seamLocal, isMobile ? 120 : 300);
+  const particles = createPowderParticles(capsule.seamLocal, isMobile ? 260 : 700);
 
   // heroFloat carries the idle bob/rotation for the bottle + cap together
   const heroFloat = new THREE.Group();

@@ -60,8 +60,9 @@ export function createPowderParticles(seamLocal: THREE.Vector3, count: number): 
       ),
       phase: rand() * Math.PI * 2,
       turbulence: 0.04 + rand() * 0.08,
-      spawnDelay: rand() * 0.45,
-      size: 0.5 + rand() * 0.9,
+      spawnDelay: rand() * 0.6,
+      // Mostly fine dust with occasional chunkier grains
+      size: rand() < 0.8 ? 0.35 + rand() * 0.55 : 0.9 + rand() * 0.7,
     });
   }
 

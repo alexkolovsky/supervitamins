@@ -144,11 +144,12 @@ export function createCapsule(): Capsule {
     color: 0xf4ded3,
   });
   const powderMaterial = new THREE.MeshStandardMaterial({
-    color: 0xefe0c4,
+    color: 0xe4d5b6,
     roughness: 1,
     metalness: 0,
     bumpMap: powderGrain,
-    bumpScale: 0.45,
+    bumpScale: 0.9,
+    envMapIntensity: 0.5,
     transparent: true,
   });
 
@@ -160,12 +161,51 @@ export function createCapsule(): Capsule {
 
   // Powder fill: opaque core whose domed top surface sits just below the open
   // rim, so the opened body half visibly reads as a cup full of powder.
-  const powderRadius = BODY_RADIUS * 0.9;
+  const powderRadius = BODY_RADIUS * 0.93;
   const powderGeometry = new THREE.CapsuleGeometry(powderRadius, 0.4, 12, 48);
   const powder = new THREE.Mesh(powderGeometry, powderMaterial);
-  const powderRestY = -0.03 - 0.2 - powderRadius;
+  // Fill right up to the open rim so the cup clearly reads as full of powder
+  const powderRestY = 0.005 - 0.2 - powderRadius;
   powder.position.y = powderRestY;
   bodyHalf.add(powder);
+
+  // Granular crust on the powder surface at the mouth — tiny grains scattered
+  // over the exposed dome so the fill unmistakably reads as powder, not shell.
+  const grainGeometry = new THREE.IcosahedronGeometry(0.014, 0);
+  const grainMaterial = new THREE.MeshStandardMaterial({
+    color: 0xe3d2ae,
+    roughness: 1,
+    metalness: 0,
+  });
+  const grainCount = 110;
+  const crust = new THREE.InstancedMesh(grainGeometry, grainMaterial, grainCount);
+  {
+    let seed = 424242;
+    const rnd = (): number => {
+      seed = (seed * 1664525 + 1013904223) % 4294967296;
+      return seed / 4294967296;
+    };
+    const dummy = new THREE.Object3D();
+    const domeCenterY = 0.2; // powder-local Y of the top dome's center
+    for (let i = 0; i < grainCount; i++) {
+      // Points on the exposed dome cap (within ~55° of the pole)
+      const polar = Math.sqrt(rnd()) * 0.96;
+      const azimuth = rnd() * Math.PI * 2;
+      const sin = polar;
+      const cos = Math.sqrt(1 - sin * sin);
+      dummy.position.set(
+        Math.cos(azimuth) * sin * powderRadius,
+        domeCenterY + cos * powderRadius + (rnd() - 0.3) * 0.012,
+        Math.sin(azimuth) * sin * powderRadius,
+      );
+      dummy.rotation.set(rnd() * Math.PI, rnd() * Math.PI, rnd() * Math.PI);
+      dummy.scale.setScalar(0.5 + rnd() * 1.1);
+      dummy.updateMatrix();
+      crust.setMatrixAt(i, dummy.matrix);
+    }
+    crust.instanceMatrix.needsUpdate = true;
+  }
+  powder.add(crust);
 
   bodyHalf.position.y = BODY_REST_Y;
   group.add(bodyHalf);
@@ -217,6 +257,9 @@ export function createCapsule(): Capsule {
     bodyGeometry.dispose();
     capGeometry.dispose();
     powderGeometry.dispose();
+    grainGeometry.dispose();
+    grainMaterial.dispose();
+    crust.dispose();
     shellBodyMaterial.dispose();
     shellCapMaterial.dispose();
     powderMaterial.dispose();
