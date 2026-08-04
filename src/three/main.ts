@@ -65,6 +65,9 @@ export function init(): void {
   capsuleRig.position.set(0, 0.7, 0);
   capsuleRig.scale.setScalar(0.55);
   capsuleRig.add(capsule.group);
+  // Anchors ride the rig (tilt + scale + position) but not the capsule's
+  // Y-spin, so callout lines stay pinned to the silhouette while it rotates.
+  for (const anchor of capsule.anchors) capsuleRig.add(anchor);
   scene.add(capsuleRig);
   capsule.setOpacity(0);
 

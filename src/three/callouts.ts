@@ -18,15 +18,16 @@ interface CalloutEntry {
   width: number;
 }
 
-/** Reveal windows on the master timeline (staggered, two per side). */
+/** Reveal windows on the master timeline (staggered, two per side).
+ *  All callouts are gone by ~0.76, before the split-section copy scrolls in. */
 const REVEAL_WINDOWS: Array<[number, number]> = [
-  [0.53, 0.6],
-  [0.57, 0.64],
-  [0.61, 0.68],
-  [0.65, 0.72],
+  [0.5, 0.56],
+  [0.54, 0.6],
+  [0.58, 0.64],
+  [0.62, 0.68],
 ];
-const FADE_OUT_START = 0.8;
-const FADE_OUT_LENGTH = 0.05;
+const FADE_OUT_START = 0.72;
+const FADE_OUT_LENGTH = 0.04;
 
 const clamp01 = (v: number): number => Math.min(1, Math.max(0, v));
 const smooth = (v: number): number => v * v * (3 - 2 * v);

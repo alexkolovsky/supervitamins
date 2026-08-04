@@ -220,18 +220,20 @@ export function createCapsule(): Capsule {
 
   const seamLocal = new THREE.Vector3(0, SEAM_Y, CAP_RADIUS);
 
-  // Callout anchor points, hugging the capsule silhouette
+  // Callout anchor points ON the capsule surface (|x| ≈ radius). They are
+  // intentionally NOT parented to `group`, which spins around Y during the
+  // infographic — the caller attaches them to the non-spinning rig so the
+  // connector lines stay pinned to the silhouette.
   const anchorOffsets: Array<[number, number, number]> = [
-    [-0.38, 0.45, 0.05],
-    [-0.42, -0.3, 0.05],
-    [0.42, 0.32, 0.05],
-    [0.38, -0.45, 0.05],
+    [-0.235, 0.35, 0.05],
+    [-0.29, -0.58, 0.05],
+    [0.235, 0.55, 0.05],
+    [0.235, -0.35, 0.05],
   ];
   const anchors = anchorOffsets.map(([x, y, z], i) => {
     const anchor = new THREE.Object3D();
     anchor.name = `calloutAnchor${i}`;
     anchor.position.set(x, y, z);
-    group.add(anchor);
     return anchor;
   });
 

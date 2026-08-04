@@ -185,6 +185,9 @@ export function buildTimeline(t: TimelineTargets): gsap.core.Timeline {
   tl.to(camera.position, { x: 0.15, y: 1.55, z: 4.4, duration: INFO_END - INFO_START, ease: 'power1.inOut' }, INFO_START);
 
   // ---- Split (0.78 – 0.92) ------------------------------------------------
+  // Drift left as the halves separate, keeping the right lane clear for copy
+  tl.to(capsuleRig.position, { x: -0.55, duration: SPLIT_END - SPLIT_START, ease: 'power1.inOut' }, SPLIT_START);
+
   const split = { t: 0 };
   tl.to(
     split,
