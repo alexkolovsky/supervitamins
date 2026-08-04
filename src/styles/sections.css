@@ -26,6 +26,13 @@ html.no-webgl {
   /* Static grade: header only shows past the hero, where the field is deep */
   --header-ink: var(--ivory);
   --header-scrim: 1;
+  /* Native chapter snapping (Lenis doesn't run on these paths) */
+  scroll-snap-type: y proximity;
+}
+
+html.reduced-motion section,
+html.no-webgl section {
+  scroll-snap-align: start;
 }
 
 html.reduced-motion body,

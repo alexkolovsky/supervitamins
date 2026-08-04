@@ -12,45 +12,100 @@ export interface Bottle {
 const BODY_RADIUS = 0.85;
 const NECK_RADIUS = 0.62;
 const NECK_TOP_Y = 2.62;
-const CORAL = '#dd6360';
+const DEEP_CORAL = '#c04350'; /* near --coral-700; renders as ~coral-500 under lighting */
+const IVORY = '#fff8f4'; /* --ivory */
 
+const SANS = '"General Sans", Helvetica, Arial, sans-serif';
+const SERIF = '"Fraunces Variable", Georgia, serif';
+
+/**
+ * Modern DTC-style label: solid coral block, left-aligned type system
+ * (eyebrow, sans product name, italic serif subline, thin-ruled benefit
+ * list, meta) with a large serif wordmark cropped off the bottom-right —
+ * drawn with the page's own webfonts and redrawn once they load.
+ */
 function createLabelTexture(): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
-  canvas.width = 2048;
+  // Match the unrolled surface aspect (circumference ≈ 5.42u : height 1.18u)
+  // so glyphs keep their true proportions when wrapped around the cylinder.
+  canvas.width = 4704;
   canvas.height = 1024;
-  const ctx = canvas.getContext('2d');
-  if (ctx) {
-    const cx = canvas.width / 2;
-    const h = canvas.height;
-    // White paper with coral accent stripes at the label's top and bottom edges
-    ctx.fillStyle = '#fbf7f3';
-    ctx.fillRect(0, 0, canvas.width, h);
-    ctx.fillStyle = CORAL;
-    ctx.fillRect(0, 0, canvas.width, 36);
-    ctx.fillRect(0, h - 36, canvas.width, 36);
-
-    ctx.textAlign = 'center';
-
-    // Big bold two-line wordmark, reference style
-    ctx.fillStyle = CORAL;
-    ctx.font = '800 218px Helvetica, Arial, sans-serif';
-    ctx.fillText('SUPER', cx, 330);
-    ctx.fillText('VITA', cx, 530);
-
-    ctx.fillStyle = '#3a3232';
-    ctx.font = '500 64px Helvetica, Arial, sans-serif';
-    ctx.fillText('Women’s Daily Multivitamin', cx, 680);
-    ctx.fillText('for Energy and Balance', cx, 762);
-
-    ctx.fillStyle = CORAL;
-    ctx.font = '600 44px Helvetica, Arial, sans-serif';
-    ctx.fillText('DIETARY SUPPLEMENT', cx, 880);
-    ctx.font = '500 40px Helvetica, Arial, sans-serif';
-    ctx.fillText('60 CAPSULES', cx, 940);
-  }
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = 8;
+
+  const draw = (): void => {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const cx = canvas.width / 2;
+    const h = canvas.height;
+    // The camera sees roughly ±700px of the wrapped texture around cx.
+    const left = cx - 700;
+    const right = cx + 700;
+
+    // Drawn deeper than the target color: the lit, tone-mapped render
+    // lifts it back up to roughly --coral-500.
+    ctx.fillStyle = DEEP_CORAL;
+    ctx.fillRect(0, 0, canvas.width, h);
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = IVORY;
+
+    // Eyebrow
+    ctx.globalAlpha = 0.8;
+    ctx.font = `500 40px ${SANS}`;
+    ctx.fillText('Dietary Supplement', left, 128);
+
+    // Product name
+    ctx.globalAlpha = 1;
+    ctx.font = `600 128px ${SANS}`;
+    ctx.fillText('Daily Multi', left, 272);
+
+    // Italic serif subline (synthetic oblique is fine at this size)
+    ctx.font = `italic 500 56px ${SERIF}`;
+    ctx.fillText('Supports your energy, balance & everyday glow', left, 380);
+
+    // Thin-ruled benefit list
+    const benefits = [
+      '+ Iron to reduce fatigue',
+      '+ 100% daily Vitamin C',
+      '+ Zinc for skin, hair & nails',
+    ];
+    ctx.font = `500 46px ${SANS}`;
+    benefits.forEach((line, i) => {
+      const rowTop = 458 + i * 106;
+      ctx.globalAlpha = 0.45;
+      ctx.fillRect(left, rowTop, right - left, 2);
+      ctx.globalAlpha = 0.95;
+      ctx.fillText(line, left, rowTop + 70);
+    });
+    ctx.globalAlpha = 0.45;
+    ctx.fillRect(left, 458 + benefits.length * 106, right - left, 2);
+
+    // Meta, bottom-left
+    ctx.globalAlpha = 0.85;
+    ctx.font = `500 38px ${SANS}`;
+    ctx.fillText('60 capsules · 30 servings', left, 886);
+    ctx.globalAlpha = 1;
+
+    // Big serif wordmark, sliding off the visible face bottom-right
+    ctx.font = `600 230px ${SERIF}`;
+    ctx.fillText('Supervita', cx + 120, h - 12);
+
+    texture.needsUpdate = true;
+  };
+
+  draw();
+  if (typeof document !== 'undefined' && document.fonts) {
+    Promise.all([
+      document.fonts.load(`600 128px ${SANS}`),
+      document.fonts.load(`500 46px ${SANS}`),
+      document.fonts.load(`600 230px ${SERIF}`),
+      document.fonts.load(`italic 500 56px ${SERIF}`),
+    ])
+      .then(draw)
+      .catch(() => {});
+  }
   return texture;
 }
 

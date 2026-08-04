@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
+import Snap from 'lenis/snap';
 import { createScene } from './scene';
 import { createBottle } from './objects/bottle';
 import { createCap } from './objects/cap';
@@ -122,7 +123,8 @@ export function init(): void {
   const lenis = new Lenis({ smoothWheel: true, lerp: 0.1 });
   lenis.on('scroll', ScrollTrigger.update);
   // Exposed for QA tooling / debugging (harmless in production)
-  Object.assign(window, { __lenis: lenis });
+  const debugExpose: Record<string, unknown> = { __lenis: lenis };
+  Object.assign(window, debugExpose);
 
   const timeline = buildTimeline({
     camera,
@@ -140,6 +142,33 @@ export function init(): void {
     scene,
     keyLight,
   });
+
+  // ---- Chapter snapping: the page always settles on a composed pose -------
+  // Element snaps track section tops through resizes; two extra value snaps
+  // pin the full-callout infographic pose (master progress ~0.7) and the
+  // document end (CTA + footer).
+  // 'lock': direction-aware paging — a scroll gesture settles on the NEXT
+  // stop in that direction (never pulls back to the nearest one), and input
+  // is locked while the snap animation runs.
+  const snap = new Snap(lenis, {
+    type: 'lock',
+    duration: 1.1,
+    debounce: 400,
+    // Effectively unlimited: every gesture settles on the next stop in its
+    // direction, even across the tall infographic chapter.
+    distanceThreshold: 100000,
+    easing: (t: number) => 1 - Math.pow(1 - t, 4),
+  });
+  for (const sel of ['#hero', '#cap-off', '#dive', '#infographic', '#split']) {
+    const el = document.querySelector<HTMLElement>(sel);
+    if (el) snap.addElement(el, { align: 'start' });
+  }
+  const footer = document.querySelector<HTMLElement>('footer');
+  if (footer) snap.addElement(footer, { align: 'end' });
+  const infoPose = (): number =>
+    0.7 * (document.documentElement.scrollHeight - window.innerHeight);
+  let removeInfoSnap = snap.add(infoPose());
+  Object.assign(window, { __snap: snap });
 
   let rafId = 0;
   function frame(time: number): void {
@@ -173,13 +202,18 @@ export function init(): void {
     ctx.resize(window.innerWidth, window.innerHeight);
     callouts.resize();
     window.clearTimeout(resizeTimer);
-    resizeTimer = window.setTimeout(() => ScrollTrigger.refresh(), 200);
+    resizeTimer = window.setTimeout(() => {
+      ScrollTrigger.refresh();
+      removeInfoSnap();
+      removeInfoSnap = snap.add(infoPose());
+    }, 200);
   });
 
   window.addEventListener('pagehide', () => {
     cancelAnimationFrame(rafId);
     timeline.scrollTrigger?.kill();
     timeline.kill();
+    snap.destroy();
     lenis.destroy();
     callouts.dispose();
     particles.dispose();
