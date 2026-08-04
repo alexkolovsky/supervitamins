@@ -12,6 +12,7 @@ export interface CalloutSystem {
 interface CalloutEntry {
   el: HTMLElement;
   line: SVGLineElement;
+  dot: SVGCircleElement;
   anchor: THREE.Object3D;
   side: 'left' | 'right';
   reveal: [number, number];
@@ -47,9 +48,14 @@ export function createCallouts(camera: THREE.PerspectiveCamera, anchors: THREE.O
       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       line.setAttribute('stroke-linecap', 'round');
       svg.appendChild(line);
+      // Dot terminal at the capsule end of the connector
+      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dot.setAttribute('r', '3');
+      svg.appendChild(dot);
       entries.push({
         el,
         line,
+        dot,
         anchor,
         side: el.dataset.side === 'right' ? 'right' : 'left',
         reveal,
@@ -111,7 +117,10 @@ export function createCallouts(camera: THREE.PerspectiveCamera, anchors: THREE.O
       entry.line.setAttribute('y1', String(ay));
       entry.line.setAttribute('x2', String(lineEndX));
       entry.line.setAttribute('y2', String(ay));
-      entry.line.style.opacity = String(line * fade * 0.9);
+      entry.line.style.opacity = String(line * fade * 0.85);
+      entry.dot.setAttribute('cx', String(lineStartX));
+      entry.dot.setAttribute('cy', String(ay));
+      entry.dot.style.opacity = String(line * fade * 0.9);
     }
   }
 
@@ -128,6 +137,7 @@ export function createCallouts(camera: THREE.PerspectiveCamera, anchors: THREE.O
   function dispose(): void {
     for (const entry of entries) {
       entry.line.remove();
+      entry.dot.remove();
     }
   }
 

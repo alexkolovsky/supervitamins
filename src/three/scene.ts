@@ -7,6 +7,8 @@ export interface SceneContext {
   camera: THREE.PerspectiveCamera;
   /** Point the camera looks at; updated by the timeline, applied each frame. */
   cameraTarget: THREE.Vector3;
+  /** Warm key light — dimmed by the timeline as chapters darken. */
+  keyLight: THREE.DirectionalLight;
   /** Resolves once the studio HDRI environment is ready (used to re-render static poses). */
   environmentReady: Promise<void>;
   resize(width: number, height: number): void;
@@ -123,5 +125,5 @@ export function createScene(canvas: HTMLCanvasElement, isMobile: boolean): Scene
     renderer.dispose();
   }
 
-  return { renderer, scene, camera, cameraTarget, environmentReady, resize, dispose };
+  return { renderer, scene, camera, cameraTarget, keyLight: key, environmentReady, resize, dispose };
 }

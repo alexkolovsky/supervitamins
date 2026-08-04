@@ -38,7 +38,7 @@ export function init(): void {
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const ctx = createScene(canvas, isMobile);
-  const { renderer, scene, camera, cameraTarget } = ctx;
+  const { renderer, scene, camera, cameraTarget, keyLight } = ctx;
 
   // ---- Object graph -------------------------------------------------------
   const bottle = createBottle();
@@ -137,6 +137,8 @@ export function init(): void {
     shadowMaterial,
     floatState,
     dimEl,
+    scene,
+    keyLight,
   });
 
   let rafId = 0;

@@ -1,25 +1,42 @@
 :root {
-  /* Palette */
-  --c-bg-top: #f6b0a8;
-  --c-bg-bottom: #e96a6e;
-  --c-ink: #ffffff;
-  --c-ink-soft: rgba(255, 255, 255, 0.82);
-  --c-accent: #fff3ef;
-  --c-btn-ink: #d8555c;
+  /* ---- Color tokens ---- */
+  --coral-100: #fbd3cc; /* lightest field */
+  --coral-300: #f6a8a0; /* hero field */
+  --coral-500: #e96a6e; /* brand mid */
+  --coral-700: #c94b58; /* deep field */
+  --berry-900: #4a1f33; /* ink — body text, dark-zone backgrounds */
+  --ivory: #fff8f4; /* text on dark fields, capsule-adjacent surfaces */
 
-  /* Type */
-  --font-display: 'Fraunces', 'Georgia', serif;
-  --font-body: 'Poppins', 'Helvetica Neue', sans-serif;
+  /* Derived duskes for the CTA close (coral-700 → berry-900 mixes) */
+  --dusk-a: #833344;
+  --dusk-b: #6a2a3c;
 
-  --fs-hero: clamp(2rem, 6.2vw, 5.2rem);
-  --fs-h2: clamp(1.6rem, 3.6vw, 3rem);
-  --fs-body: clamp(0.95rem, 1.2vw, 1.1rem);
-  --fs-callout: clamp(0.85rem, 1.15vw, 1.05rem);
+  /* Soft inks */
+  --berry-soft: rgba(74, 31, 51, 0.78);
+  --ivory-soft: rgba(255, 248, 244, 0.85);
+
+  /* Chapter-graded backdrop — tweened by the scroll timeline */
+  --bg-a: var(--coral-300);
+  --bg-b: var(--coral-100);
+  /* Header ink follows the field under the header (tweened alongside);
+     the scrim rises only in ivory-ink chapters to earn contrast at the top */
+  --header-ink: #4a1f33;
+  --header-scrim: 0;
+
+  /* ---- Type ---- */
+  --font-display: 'Fraunces Variable', 'Georgia', serif;
+  --font-body: 'General Sans', 'Helvetica Neue', sans-serif;
+
+  --fs-hero: clamp(2.8rem, 7vw, 6rem);
+  --fs-h2: clamp(1.8rem, 3.5vw, 2.6rem);
+  --fs-body: 1.08rem;
+  --fs-callout: clamp(0.95rem, 1.1vw, 1.05rem);
   --fs-small: 0.8rem;
+  --fs-eyebrow: 0.72rem; /* ~11.5px */
 
-  --track-caps: 0.14em;
+  --track-eyebrow: 0.12em;
 
-  /* Layout */
+  /* ---- Layout ---- */
   --space-gutter: clamp(1.25rem, 5vw, 4.5rem);
   --callout-col: clamp(180px, 22vw, 300px);
 

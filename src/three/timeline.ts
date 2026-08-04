@@ -28,6 +28,9 @@ export interface TimelineTargets {
   shadowMaterial: THREE.Material;
   floatState: FloatState;
   dimEl: HTMLElement | null;
+  /** Scene + key light for chapter-matched exposure grading. */
+  scene: THREE.Scene;
+  keyLight: THREE.DirectionalLight;
 }
 
 /** Where the capsule ends up for the infographic showcase. */
@@ -59,6 +62,8 @@ export function buildTimeline(t: TimelineTargets): gsap.core.Timeline {
     shadowMaterial,
     floatState,
     dimEl,
+    scene,
+    keyLight,
   } = t;
 
   const tl = gsap.timeline({
@@ -206,6 +211,60 @@ export function buildTimeline(t: TimelineTargets): gsap.core.Timeline {
     SPLIT_START,
   );
   tl.to(capsule.group.rotation, { y: 2.9, duration: 1 - SPLIT_START }, SPLIT_START);
+
+  // ---- Chapter color grade -------------------------------------------------
+  // The page backdrop is a fixed gradient on <body> driven by --bg-a/--bg-b.
+  // Each chapter gets its own field; lighting eases in the same segments so
+  // the object sits *in* the scene instead of floating over it.
+  const tok = (name: string): string =>
+    getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const body = document.body;
+  const sparkles = document.getElementById('sparkle-field');
+
+  const grade = (
+    pos: number,
+    dur: number,
+    a: string,
+    b: string,
+    headerInk: string,
+    scrim: number,
+    env: number,
+    key: number,
+  ): void => {
+    tl.to(
+      body,
+      { '--bg-a': tok(a), '--bg-b': tok(b), duration: dur, ease: 'sine.inOut' },
+      pos,
+    );
+    // Ink + scrim flip faster than the field so the header never lingers
+    // in the low-contrast middle of the crossfade.
+    tl.to(
+      body,
+      {
+        '--header-ink': tok(headerInk),
+        '--header-scrim': scrim,
+        duration: Math.min(dur, 0.05),
+        ease: 'sine.inOut',
+      },
+      pos,
+    );
+    tl.to(scene, { environmentIntensity: env, duration: dur, ease: 'sine.inOut' }, pos);
+    tl.to(keyLight, { intensity: key, duration: dur, ease: 'sine.inOut' }, pos);
+  };
+
+  // Cap-off / dive: sink into the bottle — deep coral
+  grade(0.14, 0.14, '--coral-500', '--coral-700', '--ivory', 1, 0.85, 1.35);
+  // Infographic: lift back up so the ivory lines and capsule pop
+  grade(0.4, 0.1, '--coral-300', '--coral-500', '--berry-900', 0, 1.0, 1.6);
+  // Split: warmest, most saturated moment
+  grade(0.74, 0.06, '--coral-500', '--coral-700', '--ivory', 1, 0.92, 1.45);
+  // CTA: near-berry dusk close
+  grade(0.9, 0.08, '--dusk-a', '--dusk-b', '--ivory', 1, 0.78, 1.15);
+
+  // Sparkles belong to the airy hero — gone once the dive begins.
+  if (sparkles) {
+    tl.to(sparkles, { opacity: 0, duration: 0.08 }, CAP_START);
+  }
 
   // ---- CTA settle (0.92 – 1) ----------------------------------------------
   tl.to(camera.position, { x: 0, y: 1.65, z: 5.3, duration: 1 - SPLIT_END, ease: 'power1.inOut' }, SPLIT_END);

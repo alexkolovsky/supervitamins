@@ -1,8 +1,6 @@
 ---
-import '@fontsource/fraunces/600.css';
-import '@fontsource/poppins/300.css';
-import '@fontsource/poppins/400.css';
-import '@fontsource/poppins/500.css';
+import '@fontsource-variable/fraunces';
+import '../styles/fonts.css';
 import '../styles/tokens.css';
 import '../styles/sections.css';
 
@@ -28,37 +26,59 @@ const description =
     <canvas id="webgl" aria-hidden="true"></canvas>
     <div id="scene-dim" aria-hidden="true"></div>
 
-    <!-- Sparkle accents -->
-    <span class="sparkle" style="top: 18vh; left: 12vw; width: 22px; height: 22px;" aria-hidden="true">
-      <svg viewBox="0 0 24 24"><path d="M12 0l2.4 9.6L24 12l-9.6 2.4L12 24l-2.4-9.6L0 12l9.6-2.4z" /></svg>
-    </span>
-    <span class="sparkle" style="top: 32vh; right: 14vw; width: 14px; height: 14px;" aria-hidden="true">
-      <svg viewBox="0 0 24 24"><path d="M12 0l2.4 9.6L24 12l-9.6 2.4L12 24l-2.4-9.6L0 12l9.6-2.4z" /></svg>
-    </span>
-    <span class="sparkle" style="bottom: 20vh; left: 20vw; width: 17px; height: 17px;" aria-hidden="true">
-      <svg viewBox="0 0 24 24"><path d="M12 0l2.4 9.6L24 12l-9.6 2.4L12 24l-2.4-9.6L0 12l9.6-2.4z" /></svg>
-    </span>
+    <!-- Sparkle accents (faded out past the hero by the timeline) -->
+    <div id="sparkle-field" aria-hidden="true">
+      <span class="sparkle" style="top: 18vh; left: 12vw; width: 22px; height: 22px;">
+        <svg viewBox="0 0 24 24"><path d="M12 0l2.4 9.6L24 12l-9.6 2.4L12 24l-2.4-9.6L0 12l9.6-2.4z" /></svg>
+      </span>
+      <span class="sparkle" style="top: 32vh; right: 14vw; width: 14px; height: 14px;">
+        <svg viewBox="0 0 24 24"><path d="M12 0l2.4 9.6L24 12l-9.6 2.4L12 24l-2.4-9.6L0 12l9.6-2.4z" /></svg>
+      </span>
+      <span class="sparkle" style="bottom: 20vh; left: 20vw; width: 17px; height: 17px;">
+        <svg viewBox="0 0 24 24"><path d="M12 0l2.4 9.6L24 12l-9.6 2.4L12 24l-2.4-9.6L0 12l9.6-2.4z" /></svg>
+      </span>
+    </div>
+
+    <!-- Persistent chrome: minimal header + chapter progress rail -->
+    <header id="site-header">
+      <a class="wordmark" href="#hero">Supervita</a>
+      <a class="header-shop" href="#cta">Shop</a>
+    </header>
+
+    <nav id="progress-rail" aria-label="Chapters">
+      <div class="rail-track" aria-hidden="true"><div class="rail-fill"></div></div>
+      <a class="rail-tick" href="#hero" data-label="Intro" style="top: 0%"><span></span></a>
+      <a class="rail-tick" href="#cap-off" data-label="Open" style="top: 20%"><span></span></a>
+      <a class="rail-tick" href="#dive" data-label="Inside" style="top: 40%"><span></span></a>
+      <a class="rail-tick" href="#infographic" data-label="The formula" style="top: 60%"><span></span></a>
+      <a class="rail-tick" href="#split" data-label="How it works" style="top: 80%"><span></span></a>
+      <a class="rail-tick" href="#cta" data-label="Shop" style="top: 100%"><span></span></a>
+    </nav>
 
     <!-- Infographic callouts: real DOM text, projected onto the 3D capsule -->
     <div id="callout-layer">
       <svg id="callout-lines" aria-hidden="true"></svg>
-      <p class="callout" data-side="left"><strong>All Essential Nutrients</strong></p>
-      <p class="callout" data-side="left"><strong>Iron to Reduce Fatigue</strong></p>
-      <p class="callout" data-side="right"><strong>100% of Vitamin C Daily Requirement</strong></p>
-      <p class="callout" data-side="right"><strong>Zinc Supports Skin, Hair and Nail Health</strong></p>
+      <p class="callout" data-side="left"><span class="callout-eyebrow">The blend</span><strong>All essential nutrients in one capsule</strong></p>
+      <p class="callout" data-side="left"><span class="callout-eyebrow">Iron</span><strong>Reduces tiredness and fatigue</strong></p>
+      <p class="callout" data-side="right"><span class="callout-eyebrow">Vitamin C</span><strong>100% of your daily requirement</strong></p>
+      <p class="callout" data-side="right"><span class="callout-eyebrow">Zinc</span><strong>Supports skin, hair and nails</strong></p>
     </div>
 
     <main id="scroll-root">
       <section id="hero" aria-label="Introduction">
         <div class="section-inner">
           <p class="hero-kicker">Supervita · Women’s Daily</p>
-          <h1>Easy to swallow and efficiently absorbed</h1>
+          <h1>
+            <span class="h1-line">Easy to swallow,</span>
+            <span class="h1-line h1-strong">efficiently absorbed</span>
+          </h1>
         </div>
         <p class="scroll-hint">Scroll</p>
       </section>
 
       <section id="cap-off" aria-label="Open the bottle">
         <div class="aside-copy">
+          <span class="eyebrow">Open</span>
           <h2>One capsule a day</h2>
           <p>Everything your body asks for, sealed in a single daily dose. No handfuls of pills, no guesswork.</p>
         </div>
@@ -66,6 +86,7 @@ const description =
 
       <section id="dive" aria-label="Meet the capsule">
         <div class="aside-copy">
+          <span class="eyebrow">Inside</span>
           <h2>Look closer</h2>
           <p>A gelatin capsule engineered to dissolve where your body absorbs best — gentle on the stomach, kind to your routine.</p>
         </div>
@@ -75,6 +96,7 @@ const description =
 
       <section id="split" aria-label="How it works">
         <div class="split-copy">
+          <span class="eyebrow">The formula</span>
           <h2>Finely milled, fully absorbed</h2>
           <p>
             Inside: a micro-milled nutrient blend that disperses in minutes, so vitamins reach your bloodstream instead of
@@ -106,7 +128,9 @@ const description =
 
     <script>
       import { init } from '../three/main';
+      import { initUi } from '../ui';
       init();
+      initUi();
     </script>
   </body>
 </html>
