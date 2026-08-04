@@ -267,8 +267,19 @@ export function buildTimeline(t: TimelineTargets): gsap.core.Timeline {
   }
 
   // ---- CTA settle (0.92 – 1) ----------------------------------------------
-  tl.to(camera.position, { x: 0, y: 1.65, z: 5.3, duration: 1 - SPLIT_END, ease: 'power1.inOut' }, SPLIT_END);
-  tl.to(capsuleRig.position, { y: CAPSULE_SHOWCASE.y + 0.25, duration: 1 - SPLIT_END, ease: 'power1.inOut' }, SPLIT_END);
+  // Portrait: pull further back so the split halves frame the CTA copy
+  // instead of crossing it on narrow screens.
+  const portrait = camera.aspect < 0.75;
+  tl.to(
+    camera.position,
+    { x: 0, y: 1.65, z: portrait ? 7.0 : 5.3, duration: 1 - SPLIT_END, ease: 'power1.inOut' },
+    SPLIT_END,
+  );
+  tl.to(
+    capsuleRig.position,
+    { y: CAPSULE_SHOWCASE.y + (portrait ? 0.55 : 0.25), duration: 1 - SPLIT_END, ease: 'power1.inOut' },
+    SPLIT_END,
+  );
   if (dimEl) {
     tl.to(dimEl, { opacity: 0.85, duration: 1 - SPLIT_END }, SPLIT_END);
   }

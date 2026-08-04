@@ -56,14 +56,26 @@ export function createScene(canvas: HTMLCanvasElement, isMobile: boolean): Scene
   renderer.toneMappingExposure = 1.05;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
-  renderer.setSize(window.innerWidth, window.innerHeight, false);
+  // Size from the canvas CSS box (100vw × 100lvh), not window.innerHeight —
+  // on mobile the URL bar shrinks innerHeight until the first scroll, which
+  // used to re-frame the bottle mid-hero.
+  const width = canvas.clientWidth || window.innerWidth;
+  const height = canvas.clientHeight || window.innerHeight;
+  renderer.setSize(width, height, false);
 
   const scene = new THREE.Scene();
 
-  const aspect = window.innerWidth / window.innerHeight;
+  const aspect = width / height;
   const camera = new THREE.PerspectiveCamera(fovForAspect(aspect), aspect, 0.1, 60);
-  camera.position.set(0, 0.4, 7.5);
   const cameraTarget = new THREE.Vector3(0, 0.2, 0);
+  if (aspect < 0.75) {
+    // Portrait hero: pull back and aim above the bottle so it sits lower and
+    // smaller in the frame, leaving the top clear for the headline.
+    camera.position.set(0, 0.5, 8.4);
+    cameraTarget.set(0, 1.0, 0);
+  } else {
+    camera.position.set(0, 0.4, 7.5);
+  }
 
   // Studio softbox HDRI for long, soft rectangular highlights.
   // Environment only — the clear color stays transparent for the page gradient.

@@ -69,7 +69,10 @@ html {
   position: fixed;
   inset: 0;
   width: 100vw;
+  /* Large-viewport height: the buffer/aspect derive from this, so the frame
+     stays stable when the mobile URL bar collapses on first scroll. */
   height: 100vh;
+  height: 100lvh;
   display: block;
   z-index: 1;
   pointer-events: none;
@@ -655,8 +658,55 @@ footer a:focus-visible {
   50% { opacity: 0.75; transform: scale(1) rotate(18deg); }
 }
 
-/* ---------- Mobile callout layout ---------- */
+/* ---------- Mobile layout ---------- */
 @media (max-width: 767px) {
+  :root {
+    --fs-hero: clamp(2.15rem, 10.5vw, 3.2rem);
+  }
+
+  /* Headline rides the top of the frame; the bottle sits lower (portrait
+     camera framing) so type and product stop fighting. */
+  #hero {
+    justify-content: flex-start;
+    padding-top: 16vh;
+  }
+
+  h1 {
+    max-width: none;
+  }
+
+  /* Aside chapters: copy settles at the bottom, clear of the bottle */
+  #cap-off,
+  #dive {
+    align-items: flex-end;
+    padding-bottom: 10vh;
+  }
+
+  .aside-copy,
+  #dive .aside-copy {
+    margin: 0 auto;
+    width: 100%;
+    max-width: none;
+  }
+
+  /* Deeper local field on mobile — copy inevitably brushes the render */
+  .aside-copy::before,
+  .split-copy::before {
+    inset: -55% -30%;
+    background: radial-gradient(closest-side, rgba(74, 31, 51, 0.7), transparent 85%);
+  }
+
+  .aside-copy,
+  .split-copy {
+    text-shadow: 0 1px 14px rgba(74, 31, 51, 0.55);
+  }
+
+  /* Split copy: symmetric gutters (desktop hugs the right lane) */
+  #split {
+    justify-content: center;
+    padding: 0 var(--space-gutter) 12vh;
+  }
+
   #callout-lines {
     display: none;
   }
@@ -666,7 +716,7 @@ footer a:focus-visible {
     flex-direction: column;
     justify-content: flex-end;
     gap: 0.9rem;
-    padding: 0 1.4rem 9vh;
+    padding: 0 var(--space-gutter) 6vh;
   }
 
   .callout {
@@ -676,6 +726,12 @@ footer a:focus-visible {
     padding-left: 1.1rem;
     border-left: 1.5px solid currentColor;
     transform: none !important;
+  }
+
+  footer {
+    justify-content: center;
+    text-align: center;
+    padding-bottom: 2rem;
   }
 }
 

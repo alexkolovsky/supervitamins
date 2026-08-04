@@ -111,7 +111,7 @@ export function init(): void {
     renderStatic();
     ctx.environmentReady.then(renderStatic);
     window.addEventListener('resize', () => {
-      ctx.resize(window.innerWidth, window.innerHeight);
+      ctx.resize(canvas.clientWidth, canvas.clientHeight);
       callouts.resize();
       renderStatic();
     });
@@ -196,10 +196,19 @@ export function init(): void {
     }
   });
 
-  // Resize: renderer + camera + callout re-projection + trigger refresh
+  // Resize: renderer + camera + callout re-projection + trigger refresh.
+  // Canvas is 100vw × 100lvh, so mobile URL-bar show/hide is a no-op here —
+  // bail early instead of refreshing triggers mid-scroll.
   let resizeTimer = 0;
+  let lastW = canvas.clientWidth;
+  let lastH = canvas.clientHeight;
   window.addEventListener('resize', () => {
-    ctx.resize(window.innerWidth, window.innerHeight);
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    if (w === lastW && h === lastH) return;
+    lastW = w;
+    lastH = h;
+    ctx.resize(w, h);
     callouts.resize();
     window.clearTimeout(resizeTimer);
     resizeTimer = window.setTimeout(() => {
