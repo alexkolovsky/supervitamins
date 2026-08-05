@@ -4,6 +4,8 @@ export interface PowderParticles {
   mesh: THREE.InstancedMesh;
   /** Deterministic, scrub-safe: same t always yields the same cloud. */
   setProgress(t: number): void;
+  /** Whole-cloud fade, independent of progress — used while the capsule reseals. */
+  setOpacity(opacity: number): void;
   dispose(): void;
 }
 
@@ -38,6 +40,7 @@ export function createPowderParticles(seamLocal: THREE.Vector3, count: number): 
     color: 0xf6ecd9,
     roughness: 0.95,
     metalness: 0,
+    transparent: true,
   });
   const mesh = new THREE.InstancedMesh(geometry, material, count);
   mesh.frustumCulled = false;
@@ -70,8 +73,21 @@ export function createPowderParticles(seamLocal: THREE.Vector3, count: number): 
   const gravity = -1.1;
   const duration = 2.2; // virtual seconds across the full progress window
 
+  // Visibility needs both signals: a cloud at zero progress or zero opacity
+  // should cost nothing, whichever setter ran last.
+  let lastProgress = 0;
+  const applyVisibility = (): void => {
+    mesh.visible = lastProgress > 0.001 && material.opacity > 0.001;
+  };
+
+  function setOpacity(opacity: number): void {
+    material.opacity = opacity;
+    applyVisibility();
+  }
+
   function setProgress(t: number): void {
-    mesh.visible = t > 0.001;
+    lastProgress = t;
+    applyVisibility();
     for (let i = 0; i < count; i++) {
       const traj = trajectories[i];
       if (!traj) continue;
@@ -104,5 +120,5 @@ export function createPowderParticles(seamLocal: THREE.Vector3, count: number): 
     mesh.dispose();
   }
 
-  return { mesh, setProgress, dispose };
+  return { mesh, setProgress, setOpacity, dispose };
 }

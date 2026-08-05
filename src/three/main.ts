@@ -167,6 +167,7 @@ export function init(): void {
     capsule.setSplit(0);
     capsule.setOpacity(0);
     particles.setProgress(0);
+    particles.setOpacity(1);
     floatState.hero = 1;
     floatState.capsule = 0;
     scene.environmentIntensity = envIntensity0;

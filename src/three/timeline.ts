@@ -204,10 +204,12 @@ export function buildTimeline(t: TimelineTargets): gsap.core.Timeline {
     },
     SPLIT_START,
   );
+  // The pour runs its full arc within the split chapter so the cloud has
+  // settled before the capsule starts to reseal in the CTA.
   const spill = { t: 0 };
   tl.to(
     spill,
-    { t: 1, duration: 1 - SPLIT_START, onUpdate: () => particles.setProgress(spill.t) },
+    { t: 1, duration: SPLIT_END - SPLIT_START, onUpdate: () => particles.setProgress(spill.t) },
     SPLIT_START,
   );
   tl.to(capsule.group.rotation, { y: 2.9, duration: 1 - SPLIT_START }, SPLIT_START);
@@ -266,8 +268,35 @@ export function buildTimeline(t: TimelineTargets): gsap.core.Timeline {
     tl.to(sparkles, { opacity: 0, duration: 0.08 }, CAP_START);
   }
 
-  // ---- CTA settle (0.92 – 1) ----------------------------------------------
-  // Portrait: pull further back so the split halves frame the CTA copy
+  // ---- CTA settle (0.92 – 1): the capsule reseals -------------------------
+  // The last powder dissolves first, then the halves close so the finale is
+  // the whole capsule again — the product, restored, above the Shop button.
+  tl.to(
+    split,
+    {
+      t: 0,
+      duration: 1 - SPLIT_END,
+      ease: 'power1.inOut',
+      onUpdate: () => capsule.setSplit(split.t),
+    },
+    SPLIT_END,
+  );
+  const cloudFade = { o: 1 };
+  tl.to(
+    cloudFade,
+    {
+      o: 0,
+      duration: (1 - SPLIT_END) * 0.6,
+      ease: 'power1.in',
+      onUpdate: () => particles.setOpacity(cloudFade.o),
+    },
+    SPLIT_END,
+  );
+  // Recenter: the split drifted the rig left to clear the copy lane; the
+  // closed capsule settles back on the page axis.
+  tl.to(capsuleRig.position, { x: 0, duration: 1 - SPLIT_END, ease: 'power1.inOut' }, SPLIT_END);
+
+  // Portrait: pull further back so the capsule frames the CTA copy
   // instead of crossing it on narrow screens.
   const portrait = camera.aspect < 0.75;
   tl.to(
