@@ -29,6 +29,10 @@ const REVEAL_WINDOWS: Array<[number, number]> = [
 ];
 const FADE_OUT_START = 0.72;
 const FADE_OUT_LENGTH = 0.04;
+// Outside this window every callout is fully hidden, so update() can skip
+// the projection + style writes after hiding everything once.
+const ACTIVE_START = REVEAL_WINDOWS[0]![0];
+const ACTIVE_END = FADE_OUT_START + FADE_OUT_LENGTH;
 
 const clamp01 = (v: number): number => Math.min(1, Math.max(0, v));
 const smooth = (v: number): number => v * v * (3 - 2 * v);
@@ -76,7 +80,21 @@ export function createCallouts(camera: THREE.PerspectiveCamera, anchors: THREE.O
     };
   }
 
+  let wasIdle = false;
+
   function update(progress: number): void {
+    if (progress < ACTIVE_START || progress > ACTIVE_END) {
+      if (wasIdle) return;
+      wasIdle = true;
+      for (const entry of entries) {
+        entry.el.style.opacity = '0';
+        entry.line.style.opacity = '0';
+        entry.dot.style.opacity = '0';
+      }
+      return;
+    }
+    wasIdle = false;
+
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const gutter = Math.max(20, vw * 0.05);
@@ -125,7 +143,9 @@ export function createCallouts(camera: THREE.PerspectiveCamera, anchors: THREE.O
   }
 
   function showStatic(): void {
-    update(0.75);
+    // All reveals complete by 0.68 and the fade-out starts at 0.72, so 0.7
+    // is the fully-composed pose (0.75 would render mid-fade at 25% opacity).
+    update(0.7);
   }
 
   function resize(): void {

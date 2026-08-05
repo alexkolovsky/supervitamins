@@ -15,6 +15,7 @@ export function initUi(): void {
   let lastP = -1;
   function update(): void {
     requestAnimationFrame(update);
+    if (document.hidden) return;
     const max = document.documentElement.scrollHeight - window.innerHeight;
     const p = max > 0 ? window.scrollY / max : 0;
     if (Math.abs(p - lastP) < 0.0005) return;

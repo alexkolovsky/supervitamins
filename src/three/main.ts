@@ -3,7 +3,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
 import Snap from 'lenis/snap';
-import { createScene } from './scene';
+import { createScene, frameHero } from './scene';
 import { createBottle } from './objects/bottle';
 import { createCap } from './objects/cap';
 import { createCapsule } from './objects/capsule';
@@ -126,7 +126,7 @@ export function init(): void {
   const debugExpose: Record<string, unknown> = { __lenis: lenis };
   Object.assign(window, debugExpose);
 
-  const timeline = buildTimeline({
+  const timelineTargets = {
     camera,
     cameraTarget,
     heroFloat,
@@ -141,7 +141,55 @@ export function init(): void {
     dimEl,
     scene,
     keyLight,
-  });
+  };
+
+  // Captured before any timeline mutation so a rebuild can restore them.
+  const keyIntensity0 = keyLight.intensity;
+  const envIntensity0 = scene.environmentIntensity;
+  const shadowOpacity0 = shadowMaterial.opacity;
+
+  // Everything the timeline mutates, back to its authored initial pose.
+  // A freshly built scrubbed timeline re-applies state up to the current
+  // scroll on its first render, so reset + rebuild is scrub-exact.
+  function resetSceneState(): void {
+    frameHero(camera, cameraTarget);
+    capRoot.position.set(0, bottle.neckTopY - 1.42, 0);
+    capRoot.rotation.set(0, 0, 0);
+    cap.setOpacity(1);
+    bottle.group.scale.setScalar(1);
+    bottle.group.position.y = -1.42;
+    bottle.setOpacity(1);
+    shadowMaterial.opacity = shadowOpacity0;
+    capsuleRig.position.set(0, 0.7, 0);
+    capsuleRig.scale.setScalar(0.55);
+    capsuleRig.rotation.set(0, 0, 0);
+    capsule.group.rotation.y = 0;
+    capsule.setSplit(0);
+    capsule.setOpacity(0);
+    particles.setProgress(0);
+    floatState.hero = 1;
+    floatState.capsule = 0;
+    scene.environmentIntensity = envIntensity0;
+    keyLight.intensity = keyIntensity0;
+    // Drop the inline overrides GSAP wrote so the stylesheet defaults return
+    for (const prop of ['--bg-a', '--bg-b', '--header-ink', '--header-scrim']) {
+      document.body.style.removeProperty(prop);
+    }
+    const sparkles = document.getElementById('sparkle-field');
+    if (sparkles) sparkles.style.opacity = '';
+    if (dimEl) dimEl.style.opacity = '';
+  }
+
+  let timeline = buildTimeline(timelineTargets);
+
+  // The timeline bakes aspect-dependent poses (portrait CTA framing) at build
+  // time, so crossing the portrait boundary needs a rebuild, not just refresh.
+  function rebuildTimeline(): void {
+    timeline.scrollTrigger?.kill();
+    timeline.kill();
+    resetSceneState();
+    timeline = buildTimeline(timelineTargets);
+  }
 
   // ---- Chapter snapping: the page always settles on a composed pose -------
   // Element snaps track section tops through resizes; two extra value snaps
@@ -187,11 +235,14 @@ export function init(): void {
   }
   rafId = requestAnimationFrame(frame);
 
-  // Pause the loop when the tab is hidden
+  // Pause the loop when the tab is hidden. `destroyed` keeps a late
+  // hidden→visible flip (bfcache-style navigations) from rescheduling a
+  // frame against disposed GL resources; the unconditional cancel keeps a
+  // visible event from ever double-scheduling the loop.
+  let destroyed = false;
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      cancelAnimationFrame(rafId);
-    } else {
+    cancelAnimationFrame(rafId);
+    if (!document.hidden && !destroyed) {
       rafId = requestAnimationFrame(frame);
     }
   });
@@ -202,6 +253,7 @@ export function init(): void {
   let resizeTimer = 0;
   let lastW = canvas.clientWidth;
   let lastH = canvas.clientHeight;
+  let wasPortrait = camera.aspect < 0.75;
   window.addEventListener('resize', () => {
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
@@ -212,6 +264,10 @@ export function init(): void {
     callouts.resize();
     window.clearTimeout(resizeTimer);
     resizeTimer = window.setTimeout(() => {
+      if ((camera.aspect < 0.75) !== wasPortrait) {
+        wasPortrait = camera.aspect < 0.75;
+        rebuildTimeline();
+      }
       ScrollTrigger.refresh();
       removeInfoSnap();
       removeInfoSnap = snap.add(infoPose());
@@ -219,6 +275,7 @@ export function init(): void {
   });
 
   window.addEventListener('pagehide', () => {
+    destroyed = true;
     cancelAnimationFrame(rafId);
     timeline.scrollTrigger?.kill();
     timeline.kill();

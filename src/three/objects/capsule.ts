@@ -240,18 +240,29 @@ export function createCapsule(): Capsule {
   const bodyRestY = bodyHalf.position.y;
   const capRestY = capHalf.position.y;
 
+  // The powder's opacity has two independent drivers — the whole-capsule fade
+  // and the slight thinning as the split spills — composed multiplicatively so
+  // neither depends on the other's call order within a scrubbed frame.
+  let splitThin = 1;
+  let wholeFade = 1;
+  const applyPowderOpacity = (): void => {
+    powderMaterial.opacity = splitThin * wholeFade;
+  };
+
   function setSplit(t: number): void {
     bodyHalf.position.y = bodyRestY - t * 0.6;
     capHalf.position.y = capRestY + t * 0.6;
     // The powder level sinks slightly as it spills, but the cup stays filled
     powder.position.y = powderRestY - t * 0.03;
-    powderMaterial.opacity = 1 - t * 0.15;
+    splitThin = 1 - t * 0.15;
+    applyPowderOpacity();
   }
 
   function setOpacity(opacity: number): void {
     shellBodyMaterial.opacity = opacity;
     shellCapMaterial.opacity = opacity;
-    powderMaterial.opacity = Math.min(powderMaterial.opacity, opacity);
+    wholeFade = opacity;
+    applyPowderOpacity();
     group.visible = opacity > 0.001;
   }
 

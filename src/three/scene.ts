@@ -15,6 +15,19 @@ export interface SceneContext {
   dispose(): void;
 }
 
+/** Aspect-dependent hero pose. Portrait pulls back and aims above the bottle
+ *  so it sits lower and smaller in the frame, leaving the top clear for the
+ *  headline. Re-applied when a timeline rebuild resets the scene. */
+export function frameHero(camera: THREE.PerspectiveCamera, cameraTarget: THREE.Vector3): void {
+  if (camera.aspect < 0.75) {
+    camera.position.set(0, 0.5, 8.4);
+    cameraTarget.set(0, 1.0, 0);
+  } else {
+    camera.position.set(0, 0.4, 7.5);
+    cameraTarget.set(0, 0.2, 0);
+  }
+}
+
 function fovForAspect(aspect: number): number {
   // Wider vertical FOV in portrait so the bottle still fits the frame.
   if (aspect < 0.75) return 46;
@@ -68,14 +81,7 @@ export function createScene(canvas: HTMLCanvasElement, isMobile: boolean): Scene
   const aspect = width / height;
   const camera = new THREE.PerspectiveCamera(fovForAspect(aspect), aspect, 0.1, 60);
   const cameraTarget = new THREE.Vector3(0, 0.2, 0);
-  if (aspect < 0.75) {
-    // Portrait hero: pull back and aim above the bottle so it sits lower and
-    // smaller in the frame, leaving the top clear for the headline.
-    camera.position.set(0, 0.5, 8.4);
-    cameraTarget.set(0, 1.0, 0);
-  } else {
-    camera.position.set(0, 0.4, 7.5);
-  }
+  frameHero(camera, cameraTarget);
 
   // Studio softbox HDRI for long, soft rectangular highlights.
   // Environment only — the clear color stays transparent for the page gradient.
