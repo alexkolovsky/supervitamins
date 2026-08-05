@@ -8,7 +8,6 @@ interface LenisLike {
 export function initUi(): void {
   const header = document.getElementById('site-header');
   const railFill = document.querySelector<HTMLElement>('.rail-fill');
-  const ticks = Array.from(document.querySelectorAll<HTMLAnchorElement>('.rail-tick'));
 
   // rAF-driven (not scroll events): Lenis owns the scroll, and a per-frame
   // read is the one signal that never goes stale. Writes are skipped when
@@ -25,15 +24,25 @@ export function initUi(): void {
   }
   requestAnimationFrame(update);
 
-  // Route rail/header anchors through Lenis when it's driving the scroll,
-  // so the timeline scrubs through chapters instead of jumping.
-  for (const tick of ticks) {
-    tick.addEventListener('click', (e) => {
+  // Route every in-page anchor through Lenis when it's driving the scroll,
+  // so the timeline scrubs through chapters instead of jumping. Some chapters
+  // compose at a timeline position, not at their section's top:
+  //  - #infographic: the full-callout pose sits at master progress 0.7
+  //  - #cta: the settled finale (dim + pulled-back camera) is the document end
+  const poseFor = (hash: string): number | HTMLElement | null => {
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    if (hash === '#infographic') return max * 0.7;
+    if (hash === '#cta') return max;
+    return document.querySelector<HTMLElement>(hash);
+  };
+
+  for (const link of document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')) {
+    link.addEventListener('click', (e) => {
       const lenis = (window as { __lenis?: LenisLike }).__lenis;
-      const target = document.querySelector<HTMLElement>(tick.getAttribute('href') ?? '');
-      if (lenis && target) {
+      const dest = poseFor(link.getAttribute('href') ?? '');
+      if (lenis && dest !== null) {
         e.preventDefault();
-        lenis.scrollTo(target, { duration: 1.6 });
+        lenis.scrollTo(dest, { duration: 1.6 });
       }
     });
   }
